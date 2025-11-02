@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跨端笔记系统 - 电脑版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* 隐藏默认的页面 */
+        #main-page, #config-page {
+            display: none;
+        }
+        /* 显示主页面时的布局 */
+        #main-page.active {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        /* 顶部导航栏 */
+        .top-bar {
+            height: 60px;
+            background-color: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+        }
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        /* 左侧面板 */
+        .left-panel {
+            width: 25%;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        /* 右侧面板 */
+        .right-panel {
+            width: 75%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        /* 面板内容区域 */
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+        /* 文件列表的最大高度 */
+        #files-list {
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+        /* 文件项样式 */
+        .file-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            cursor: pointer;
+            position: relative;
+        }
+        .file-item:hover {
+            background-color: #f9fafb;
+        }
+        .file-item.active {
+            background-color: #dbeafe;
+        }
+        /* 删除按钮 */
+        .delete-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            display: none;
+            background-color: #fee2e2;
+            color: #ef4444;
+            border: none;
+            border-radius: 0.25rem;
+            padding: 0.25rem;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background-color: #fecaca;
+        }
+        .file-item:hover .delete-btn {
+            display: block;
+        }
+        
+        /* 适配小屏幕 */
+        @media (max-width: 768px) {
+            .left-panel {
+                width: 35%;
+            }
+            .right-panel {
+                width: 65%;
+            }
+            .top-bar {
+                height: 50px;
+                padding: 0 1rem;
+            }
+        }
+        
+        /* 删除确认模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 顶部导航栏 -->
+    <div class="top-bar">
+        <div class="flex items-center">
+            <i class="fas fa-book text-blue-600 text-xl mr-2"></i>
+            <span class="text-xl font-bold text-gray-900">笔记系统</span>
+        </div>
+        <div class="ml-auto flex items-center space-x-4">
+            <button id="add-file-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm flex items-center">
+                <i class="fas fa-plus mr-2"></i> 新增文件
+            </button>
+            <div class="flex items-center space-x-3">
+                <button id="change-password-btn" class="text-gray-500 hover:text-gray-700 text-sm flex items-center">
+                    <i class="fas fa-key mr-1"></i> 修改密码
+                </button>
+                <button id="logout-btn" class="text-gray-500 hover:text-gray-700 text-sm flex items-center">
+                    <i class="fas fa-sign-out-alt mr-1"></i> 退出
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主界面 - 左右分栏布局 -->
+    <div id="main-page">
+        <!-- 主内容区域 -->
+        <div class="main-content">
+            <!-- 左侧面板：文件显示区 -->
+            <div class="left-panel bg-white">
+                <div class="panel-content">
+                    <div id="files-list">
+                        <!-- 文件列表将在这里显示 -->
+                        <p class="text-gray-500 text-center py-8 text-sm">暂无文件</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧面板：文件内容区 -->
+            <div class="right-panel bg-white">
+                <div class="panel-content p-6">
+                    <input type="text" id="file-title" class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 text-base" placeholder="文件标题">
+                    <textarea id="file-content" class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4 text-base" rows="20" placeholder="文件内容"></textarea>
+                    <div class="flex justify-end">
+                        <button id="save-file-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md text-base">保存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 服务器配置页面 -->
+    <div id="config-page" class="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="mx-auto bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                    <i class="fas fa-lock text-2xl text-blue-600"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">登录到笔记系统</h2>
+                <p class="text-gray-600">请输入服务器地址和密码</p>
+            </div>
+            
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">服务器地址</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-server text-gray-400"></i>
+                        </div>
+                        <input type="text" id="server-url" class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="例如: http://192.168.1.100:8080">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">访问密码</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-key text-gray-400"></i>
+                        </div>
+                        <input type="password" id="access-password" class="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="请输入访问密码">
+                    </div>
+                </div>
+                
+                <button id="save-config" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 transform hover:scale-[1.02]">
+                    登录
+                </button>
+            </div>
+            
+            <div class="mt-6 text-center text-sm text-gray-500">
+                <p>默认密码: 15378</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改密码模态框 -->
+    <div id="change-password-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-900">修改密码</h3>
+                <button id="close-modal" class="text-gray-400 hover:text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">原密码</label>
+                    <input type="password" id="old-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">新密码</label>
+                    <input type="password" id="new-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">确认新密码</label>
+                    <input type="password" id="confirm-password" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-change" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">取消</button>
+                    <button id="confirm-change" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">确认修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 删除确认模态框 -->
+    <div id="delete-confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-lg font-bold mb-2">确认删除</h3>
+            <p class="mb-4">确定要删除文件 "<span id="delete-file-name"></span>" 吗？</p>
+            <div class="flex justify-end space-x-2">
+                <button id="cancel-delete" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">取消</button>
+                <button id="confirm-delete" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="web_app.js"></script>
+</body>
+</html>
