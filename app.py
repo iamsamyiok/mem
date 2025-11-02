@@ -158,6 +158,22 @@ def change_password():
     
     return jsonify({'status': 'success', 'msg': '密码修改成功'})
 
+# 删除笔记端点
+@app.route('/api/note/<int:note_id>', methods=['DELETE'])
+def delete_note(note_id):
+    # 验证密码
+    password = request.args.get('password')
+    if not verify_password(password):
+        return jsonify({'status': 'error', 'msg': '密码错误'}), 401
+    
+    conn = sqlite3.connect('notes.db')
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM notes WHERE id = ?', (note_id,))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'status': 'success', 'msg': '笔记删除成功'})
+
 # 获取文件列表
 @app.route('/api/files', methods=['GET'])
 def get_files():

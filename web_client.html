@@ -97,17 +97,34 @@
             display: block;
         }
         
+        /* 适配中等屏幕 */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .left-panel {
+                width: 30%;
+            }
+            .right-panel {
+                width: 70%;
+            }
+        }
+        
         /* 适配小屏幕 */
         @media (max-width: 768px) {
             .left-panel {
-                width: 35%;
+                width: 40%;
             }
             .right-panel {
-                width: 65%;
+                width: 60%;
             }
             .top-bar {
                 height: 50px;
                 padding: 0 1rem;
+            }
+            
+            /* 移动端始终显示删除按钮 */
+            .delete-btn {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
             }
         }
         

@@ -217,18 +217,9 @@ cancelDeleteBtn.addEventListener('click', () => {
 // 确认删除
 confirmDeleteBtn.addEventListener('click', () => {
     if (fileToDelete) {
-        // 这里我们使用一个变通方法，因为API没有提供直接删除笔记的功能
-        // 我们将创建一个标题为"[已删除]"的笔记来覆盖原笔记
-        fetch(`${serverUrl}/api/note`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                title: '[已删除]', 
-                content: '此笔记已被删除',
-                password: accessPassword
-            })
+        // 调用删除笔记的API
+        fetch(`${serverUrl}/api/note/${fileToDelete.id}?password=${encodeURIComponent(accessPassword)}`, {
+            method: 'DELETE'
         })
         .then(response => response.json())
         .then(data => {

@@ -158,15 +158,28 @@ function loadFiles() {
                 const fileElement = document.createElement('div');
                 fileElement.className = 'file-item';
                 fileElement.innerHTML = `
-                    <div class="font-medium text-gray-800 truncate">${note.title}</div>
-                    <div class="text-xs text-gray-500 mt-1">${note.time}</div>
+                    <div class="file-info">
+                        <div class="file-title">${note.title}</div>
+                        <button class="delete-btn" data-id="${note.id}" data-title="${note.title}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="file-time">${note.time}</div>
                 `;
-                fileElement.addEventListener('click', () => openFile(note));
+                fileElement.addEventListener('click', (e) => {
+                    // 如果点击的是删除按钮，则不打开文件
+                    if (e.target.closest('.delete-btn')) {
+                        return;
+                    }
+                    openFile(note);
+                });
                 
-                // 添加右滑删除功能的说明（在实际应用中可以实现手势识别）
-                fileElement.addEventListener('touchstart', handleTouchStart);
-                fileElement.addEventListener('touchmove', handleTouchMove);
-                fileElement.addEventListener('touchend', handleTouchEnd);
+                // 为删除按钮添加事件监听器
+                const deleteBtn = fileElement.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showDeleteConfirm(note.id, note.title);
+                });
                 
                 filesList.appendChild(fileElement);
             });
@@ -193,29 +206,6 @@ function openFile(note) {
     event.currentTarget.classList.add('active');
 }
 
-// 触摸事件处理（用于实现滑动删除）
-let touchStartX = 0;
-let touchEndX = 0;
-
-function handleTouchStart(event) {
-    touchStartX = event.changedTouches[0].screenX;
-}
-
-function handleTouchMove(event) {
-    // 可以在这里添加滑动效果
-}
-
-function handleTouchEnd(event) {
-    touchEndX = event.changedTouches[0].screenX;
-    const diffX = touchStartX - touchEndX;
-    
-    // 如果向左滑动超过50像素，显示删除确认
-    if (diffX > 50) {
-        const noteTitle = event.currentTarget.querySelector('.font-medium').textContent;
-        showDeleteConfirm(currentFile ? currentFile.id : null, noteTitle);
-    }
-}
-
 // 显示删除确认对话框
 function showDeleteConfirm(noteId, noteTitle) {
     fileToDelete = { id: noteId, title: noteTitle };
@@ -232,18 +222,9 @@ cancelDeleteBtn.addEventListener('click', () => {
 // 确认删除
 confirmDeleteBtn.addEventListener('click', () => {
     if (fileToDelete) {
-        // 这里我们使用一个变通方法，因为API没有提供直接删除笔记的功能
-        // 我们将创建一个标题为"[已删除]"的笔记来覆盖原笔记
-        fetch(`${serverUrl}/api/note`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                title: '[已删除]', 
-                content: '此笔记已被删除',
-                password: accessPassword
-            })
+        // 调用删除笔记的API
+        fetch(`${serverUrl}/api/note/${fileToDelete.id}?password=${encodeURIComponent(accessPassword)}`, {
+            method: 'DELETE'
         })
         .then(response => response.json())
         .then(data => {
